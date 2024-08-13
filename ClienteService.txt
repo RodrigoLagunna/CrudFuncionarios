@@ -1,0 +1,38 @@
+				ClienteService
+
+var telefone = await _consultaRepository.ConsultarClientePorTelefone(request.Celular, apiKey);
+
+if (telefone != null)
+{
+    throw new ValidationException("Este telefone já está cadastrado no sistema.");
+}
+
+					ConsultaRepository
+
+public async Task<Cliente?> ConsultarClientePorTelefone(string telefone, string apikey)
+{
+    return await _retryPolicy.ExecuteAsync(async () =>
+    {
+        var client = new RestClient(_options.Value.CadastroCentralizado.BaseUrl);
+        var request = new RestRequest($"consulta/clientes");
+        request.AddHeader("apikey", apikey);
+        request.AddParameter("SearchString", telefone); // Adiciona o telefone como parâmetro de busca
+
+        var response = await client.ExecuteAsync<Cliente>(request);
+
+        if (response.StatusCode != HttpStatusCode.OK)
+            throw new Exception(response.ErrorMessage);
+
+        if (response.Content == null)
+            throw new Exception($"Erro ao buscar o cliente com Telefone: {telefone}");
+
+        var responseData = JsonConvert.DeserializeObject<ResponseData<Cliente>>(response.Content);
+
+        return responseData?.Data;
+    });
+}
+
+			
+				IConsultaRepository
+
+ Task<Cliente?> ConsultarClientePorTelefone(string telefone, string apikey);
